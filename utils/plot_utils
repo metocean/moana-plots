@@ -1,0 +1,69 @@
+def calc_grid_hist(
+        x_coords: np.array, y_coords: np.array, time: np.array, x_edges: list, y_edges: list
+) -> tuple[list, list, list]:
+    """Takes x,y (e.g., lon, lat) coordinates of each profile or 
+    sensor deployment and calculates the average monthly number 
+    of profiles/deployments per grid cell.  Grid cells are defined 
+    by x_edges and y_edges (e.g., longitude and latitude coordinates).  
+
+    Parameters
+    ----------
+    x_coords : np.array
+        Measurements' x_coordinates (e.g., longitude)
+    y_coords : np.array
+        Measurements' y_coordinates (e.g., latitude)
+    time : np.array
+        Measurements' times
+    x_edges : list
+        x-coordinates of grid cell edges
+    y_edges : list
+        y-coordinates of grid cell edges
+
+    Returns
+    -------
+    tuple[list, list, list]
+        Returns average monthly counts per grid cell (h) and grid
+        cell centers (x,y), i.e. (lon,lat)
+    """
+    df = (
+        pd.DataFrame(data={"xc": x_coords, "yc": y_coords, "time": pd.to_datetime(time)})
+        .drop_duplicates()
+        .set_index("time")
+    )
+
+    x2 = []
+    y2 = []
+    h2 = []
+
+    for xa, ya in itertools.product(x_edges, y_edges):
+        yb = ya + res
+        xb = xa + res
+        in_cell = df.loc[
+            (df.yc >= ya) & (df.yc < yb) & (df.xc >= xa) & (df.xc < xb)
+            ].dropna()
+        ctm = in_cell.resample("MS")["yc"].count().fillna(0).mean()
+        x2.append((xa + xb) / 2)
+        y2.append((ya + yb) / 2)
+        h2.append(ctm)
+
+    x = np.array(x2)
+    y = np.array(y2)
+    h = np.array(h2)
+
+    return h, x, y
+
+def set_plot_params(ax):
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_color('#DDDDDD')
+
+    # Second, remove the ticks as well.
+    ax.tick_params(bottom=False, left=False, right=False)
+
+    # Third, add a horizontal grid (but keep the vertical grid hidden).
+    # Color the lines a light gray as well.
+    ax.set_axisbelow(True)        
+
+    ax.yaxis.grid(True, color='#EEEEEE')
+    ax.xaxis.grid(False)
